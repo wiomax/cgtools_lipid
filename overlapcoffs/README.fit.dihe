@@ -1,0 +1,12 @@
+fit the functions as the sum of the function f(cosnx)
+
+parameter sequence in fitcoff.potd.*.dat 
+N: number of Gaussian funcitons
+c
+a_i, d_i, n_i
+
+y = c + sum_(i=1,...,N) a*(1+Math.cos(Math.floor(n)*x+d))    
+x (i.e. phosine): [-PI, PI]
+n_i is a integer, other parameters are double
+
+Pot (x) = kBT * y

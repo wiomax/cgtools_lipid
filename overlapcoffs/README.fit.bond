@@ -1,0 +1,13 @@
+fit the functions as the sum of the Gaussian functions by Zunjing Wang, July 1st, 2008
+
+parameter sequence in fitcoff.bdf.*.dat 
+N: number of Gaussian funcitons
+a_i, b_i, c_i
+
+y = sum_(i=1,...,N) a_i*exp[-(x-b_i)^2 / (c_i^2)]
+x (i.e. bond length): [0, infinity)
+# the Gaussian is a*exp[-(x-b)^2 / (2.0 * c^2)] thus c_i = sqrt(2)* c
+
+Pot (x) = -kBT * ln (y/x^2)
+
+
