@@ -1,0 +1,8 @@
+#For example: pot_force_nonbond.CHES.tab provides the tabulated nonbonded interactions between CH and ES CG beads.
+
+# the formate of the files pot_force_nonbond.CHES.tab
+1st line:            # (number of lines of data)  (tabulated bin size [Angstrom])  (cut off [Angstrom])
+2nd line to the end: (distance: r [Angstrom])  (force: U'/r [k_B*T/Angstrom])  (energy: U [k_B*T])
+
+
+
