@@ -5,7 +5,7 @@ This software simulates lipid bilayer with a systematically solvent-free coarse-
 General information
 -------------------
 
-Portal: http://www.wiomax.com/maos-tsp
+Portal: http://www.wiomax.com/cgtools
 E-MAIL: info@wiomax.com
 
 License description
