@@ -1,0 +1,692 @@
+# cgtools::utils -- 
+#
+# Compute parameters which will be used in cgtools::analysis
+# Zunjing Wang 
+# Author: Zun-Jing Wang
+# August 2010
+
+namespace eval ::cgtools::utils {
+    namespace export compute_membrane_comz
+    namespace export compute_gelcluster_list
+    namespace export find_the_largest_cluster 
+    namespace export writepdb_cluster_charmm 
+}
+
+# ::cgtools::utils::compute_membrane_comz--
+proc ::cgtools::utils::compute_membrane_comz { topology } {
+
+    set memcomz 0.0
+    set ibead 0
+    foreach mol $topology {
+      set moltype [lindex $mol 0]
+      set typeinfo [matchtype $moltype]
+      set molname [lindex $typeinfo 1]
+      #if {$molname == "PART"} {
+      #  puts "this is a part"
+      #} 
+      if {$molname != "PART"} { 
+    	set partbondlists [lindex $typeinfo 2]
+    	set partbondtypelists [lindex $typeinfo 3]
+    	set partbondcharmmlists [lindex $typeinfo 4]
+    
+    	#set and write particle list
+    	set beadlists [lindex $partbondlists 0]
+    	set nbeads [llength $beadlists]
+    
+    	#set beadtypelists [lindex $partbondtypelists 0]
+        #set itype_begin [lindex [lindex $beadtypelists 0] 0]
+    	set beadcharmmlists [lindex $partbondcharmmlists 0]
+
+	for { set b 0 } { $b < $nbeads } {incr b } {
+        	#current particle
+        	set partnum [lindex $mol [ expr $b + 1] ]
+        	#set partnumcharmm [expr $partnum + 1]
+        	#set partname [lindex [lindex $beadcharmmlists $b] 1]
+		set posvec [part $partnum print pos]
+		#set posx [lindex $posvec 0]
+		#set posy [lindex $posvec 1]
+		set posz [lindex $posvec 2]
+		set memcomz [expr $memcomz + $posz]
+		incr ibead		
+	}
+      } 
+    }
+    set memcomz [expr $memcomz/($ibead*1.0)]
+    #puts "memcomz= $memcomz"
+    return $memcomz
+}
+
+# ::cgtools::utils::compute_gelcluster_list--
+# useful for multicomposition lipid, e.g. binary system with DOPC and DPPC lipids
+proc ::cgtools::utils::compute_gelcluster_list { system_specs topology } {
+
+    # this only works on a binary lipid system
+    set rcut_nconn 7.6
+    set p2order_threshould 0.5
+    set ngelconn_threshould 3 
+    set p2orderdiff_threshould 0.15
+
+    set p2orderlist 0.0
+    unset p2orderlist
+
+    set aeneighborlist 0.0
+    unset aeneighborlist
+
+    #puts "$topology"
+    #Count how many partiles of moltype 0
+    set n_molslist [lindex [lindex $system_specs 0] 1]
+    #puts "$n_molslist"
+    set n_moltype0 [lindex [lindex [lindex $n_molslist 1] 0] 1]
+    #puts "$n_moltype0"
+    set typeinfo [matchtype 0]
+    set partbondlists [lindex $typeinfo 2]
+    set beadlists [lindex $partbondlists 0]
+    set npart_permol_moltype0 [llength $beadlists]
+    set npart_moltype0 [expr $n_moltype0 * $npart_permol_moltype0]
+    #puts "npart_moltype0= $npart_moltype0"
+    #puts "npart_permol_moltype0= $npart_permol_moltype0"
+    
+    set typeinfo [matchtype 1]
+    set partbondlists [lindex $typeinfo 2]
+    set beadlists [lindex $partbondlists 0]
+    set npart_permol_moltype1 [llength $beadlists]
+    #puts "npart_permol_moltype1= $npart_permol_moltype1"
+
+    set b_ae_list_dopc 0
+    unset b_ae_list_dopc
+    lappend b_ae_list_dopc 9
+    lappend b_ae_list_dopc 16
+
+    set b_ae_list_dppc 0
+    unset b_ae_list_dppc
+    lappend b_ae_list_dppc 8
+    lappend b_ae_list_dppc 14
+
+    foreach mol $topology {
+      set neighborlist_now {}
+      set moltype [lindex $mol 0]
+      set typeinfo [matchtype $moltype]
+      set molname [lindex $typeinfo 1]	
+      #if {$molname == "PART"} {
+      #  puts "this is a part"
+      #} 
+      ### only analyze lipid molecules, not peptide particle
+      if {$molname != "PART"} { 
+    	set partbondlists [lindex $typeinfo 2]
+    	set partbondtypelists [lindex $typeinfo 3]
+    	set partbondcharmmlists [lindex $typeinfo 4]
+    
+    	#set and write particle list
+    	set beadlists [lindex $partbondlists 0]
+    	set nbeads [llength $beadlists]
+    
+    	#set beadtypelists [lindex $partbondtypelists 0]
+        #set itype_begin [lindex [lindex $beadtypelists 0] 0]
+    	set beadcharmmlists [lindex $partbondcharmmlists 0]
+
+	# Compute P2 order parameter of each lipid
+	#puts "molname = $molname"
+        if {$molname == "DOPC"} {
+		set b_begin1 4
+ 		set b_end1 9
+		set b_begin2 11
+                set b_end2 16  
+		set b_ae_list $b_ae_list_dopc
+	} elseif {$molname == "DPPC"} {
+		set b_begin1 4
+ 		set b_end1 8
+		set b_begin2 10
+                set b_end2 14  
+		set b_ae_list $b_ae_list_dppc
+	} else {
+		 mmsg::err [namespace current] "wrong type of lipid in ::cgtools::utils::compute_gelcluster_list"
+	}
+
+
+	# the 1st tail
+	set p2order_tail1 0.0
+	for { set b $b_begin1 } { $b < $b_end1 } {incr b } {
+       		#begin particle of the tail bond
+       	 	set partnum_begin [lindex $mol [ expr $b + 1] ]
+       		#set partname [lindex [lindex $beadcharmmlists $b] 1]
+		#puts "tail one $partname  -- "
+		set posvec_begin [part $partnum_begin print pos]
+		set posx_begin [lindex $posvec_begin 0]
+		set posy_begin [lindex $posvec_begin 1]
+		set posz_begin [lindex $posvec_begin 2]
+       		#end particle of the tail bond
+       	 	set partnum_end [lindex $mol [ expr $b + 2] ]
+       		#set partname [lindex [lindex $beadcharmmlists [expr $b + 1] ] 1]
+		#puts "$partname"
+		set posvec_end [part $partnum_end print pos]
+		set posx_end [lindex $posvec_end 0]
+		set posy_end [lindex $posvec_end 1]
+		set posz_end [lindex $posvec_end 2]
+       		#vector of the tail bond
+		set xvector [expr $posx_end - $posx_begin]
+		set yvector [expr $posy_end - $posy_begin]
+		set zvector [expr $posz_end - $posz_begin]
+		set cosangle2 [expr $zvector * $zvector]
+		set mod2 [expr $xvector * $xvector + $yvector * $yvector + $zvector * $zvector]
+		set p2order_now [expr 1.5 * $cosangle2 / $mod2 - 0.5]
+		set p2order_tail1 [expr $p2order_tail1 + $p2order_now]
+	}
+	set p2order_tail1 [expr $p2order_tail1/(1.0*($b_end1-$b_begin1))]
+	
+	# the 2nd tail
+	set p2order_tail2 0.0
+	for { set b $b_begin2 } { $b < $b_end2 } {incr b } {
+                #begin particle of the tail bond
+                set partnum_begin [lindex $mol [ expr $b + 1] ]
+        	#set partname [lindex [lindex $beadcharmmlists $b] 1]
+		#puts "tail two $partname  -- " 
+                set posvec_begin [part $partnum_begin print pos]
+                set posx_begin [lindex $posvec_begin 0]
+                set posy_begin [lindex $posvec_begin 1]
+                set posz_begin [lindex $posvec_begin 2]
+                #end particle of the tail bond
+                set partnum_end [lindex $mol [ expr $b + 2] ]
+        	#set partname [lindex [lindex $beadcharmmlists [expr $b + 1] ] 1]
+		#puts "$partname"
+                set posvec_end [part $partnum_end print pos]
+                set posx_end [lindex $posvec_end 0]
+                set posy_end [lindex $posvec_end 1]
+                set posz_end [lindex $posvec_end 2]
+                #vector of the tail bond
+                set xvector [expr $posx_end - $posx_begin]
+                set yvector [expr $posy_end - $posy_begin]
+                set zvector [expr $posz_end - $posz_begin]
+                set cosangle2 [expr $zvector * $zvector]
+                set mod2 [expr $xvector * $xvector + $yvector * $yvector + $zvector * $zvector]
+		set p2order_now [expr 1.5 * $cosangle2 / $mod2 - 0.5]
+		set p2order_tail2 [expr $p2order_tail2 + $p2order_now]
+        } 
+	set p2order_tail2 [expr $p2order_tail2/(1.0*($b_end2-$b_begin2))]
+	# average of the two tails
+	set p2order_now [expr ($p2order_tail1 + $p2order_tail2) / 0.5]
+	lappend p2orderlist $p2order_now
+
+	# Compute neiborlist of each lipida
+	# only analyze AE_tail1 bead as position of the molecule
+
+	foreach b_ae $b_ae_list {
+	  #puts "b_ae = $b_ae"
+          set partnum_ae_now [lindex $mol [expr $b_ae + 1]]
+	  set b_ae_neighborlist [ analyze nbhood $partnum_ae_now $rcut_nconn ]
+	  #puts "$b_ae_neighborlist"
+    	  foreach bneighbornow $b_ae_neighborlist {
+		if {$bneighbornow < $npart_moltype0 } {
+		#DOPC
+		    if { $bneighbornow % $npart_permol_moltype0 == [lindex $b_ae_list_dopc 0] || $bneighbornow % $npart_permol_moltype0 == [lindex $b_ae_list_dopc 1] } {
+		       #set bnow [expr $bneighbornow % $npart_permol_moltype0]
+       		       #set partname [lindex [lindex $beadcharmmlists $bnow ] 1]
+		       #puts "$partname"
+		       set mol_neighbor_now [expr int($bneighbornow/$npart_permol_moltype0)]
+		       #puts "$mol_neighbor_now"
+      		       #lappend neighborlist_now $mol_neighbor_now
+		       set flag_findmol_in_currentlist 0
+		       set nlook [llength $neighborlist_now]
+    		       for { set ilook 0 } { $ilook < $nlook } {incr ilook} {
+			   set imol_look [lindex $neighborlist_now $ilook]
+		    	   if { $imol_look == $mol_neighbor_now} {
+				set flag_findmol_in_currentlist 1
+			   }
+		
+		       }
+		       if { $flag_findmol_in_currentlist == 0 } {
+      		       		set neighborlist_now [linsert $neighborlist_now $nlook $mol_neighbor_now]
+		       }
+	       	    }
+		} else {
+		#DPPC
+		    set bneighbornow_new [expr $bneighbornow - $npart_moltype0]
+		    if { $bneighbornow_new % $npart_permol_moltype1 == [lindex $b_ae_list_dppc 0] || $bneighbornow_new % $npart_permol_moltype1 == [lindex $b_ae_list_dppc 1] } {
+		       #set bnow [expr $bneighbornow_new % $npart_permol_moltype1]
+       		       #set partname [lindex [lindex $beadcharmmlists $bnow ] 1]
+		       #puts "$partname"
+		       set mol_neighbor_now [expr $n_moltype0 + int($bneighbornow_new/$npart_permol_moltype1)]
+		       #puts "$mol_neighbor_now"
+      		       #lappend neighborlist_now $mol_neighbor_now
+		       set flag_findmol_in_currentlist 0
+                       set nlook [llength $neighborlist_now]
+                       for { set ilook 0 } { $ilook < $nlook } {incr ilook} {
+                           set imol_look [lindex $neighborlist_now $ilook]
+                           if { $imol_look == $mol_neighbor_now} {
+                                set flag_findmol_in_currentlist 1
+                           }
+
+                       }
+                       if { $flag_findmol_in_currentlist == 0 } {
+      		       		set neighborlist_now [linsert $neighborlist_now $nlook $mol_neighbor_now]
+                       }
+	            }
+		}
+	  }
+      	}
+	#puts "$neighborlist_now"
+    	lappend aeneighborlist $neighborlist_now
+      } 
+    }
+    #puts "[llength $p2orderlist]"
+    #puts "$p2orderlist"
+    puts "[llength $aeneighborlist]"
+    puts "aeneighborlist: $aeneighborlist"
+
+    ##get gelmollinklist
+    set gelmollinklist 0
+    unset gelmollinklist
+    set imol 0
+    foreach mol_neighborlist $aeneighborlist {
+	set p2order_i [lindex $p2orderlist $imol]
+        set find_gel_mol 0
+	set gelflag 0
+	set gelmollink_i {} 
+	unset gelmollink_i
+    	foreach mol_neighbor $mol_neighborlist {
+    		set jmol $mol_neighbor 
+		set p2order_j [lindex $p2orderlist $jmol]
+		#set product_p2ij [expr $p2order_i * $p2order_j]
+		#if { $product_p2ij >= 0.25} 
+		if { $p2order_i >= $p2order_threshould && $p2order_j >= $p2order_threshould} {
+		    set p2order_diff [expr $p2order_i - $p2order_j]
+		    if { $p2order_diff < 0.} {
+			set p2order_diff [expr -1.0 * $p2order_diff]
+		    }
+		    if { $p2order_diff <= $p2orderdiff_threshould } {
+			lappend gelmollink_i $jmol
+    			set find_gel_mol 1
+		    }
+		}
+	}
+	if { $find_gel_mol  == 1} {	
+		set ngelconn_i [llength $gelmollink_i]
+		if { $ngelconn_i >= $ngelconn_threshould} {	
+			set gelflag 1
+		} else {
+			set gelflag 0
+			set gelmollink_i {}
+			
+		}
+	} else {
+		set gelflag 0
+		set gelmollink_i {} 
+	}
+	set gelmollinknew 0 
+	unset gelmollinknew 
+	lappend gelmollinknew $gelflag
+	lappend gelmollinknew $gelmollink_i
+	lappend gelmollinklist $gelmollinknew
+	incr imol
+    }
+    puts "gelmollinklist: $gelmollinklist"
+    puts "[llength $gelmollinklist]"
+
+    #get the gelmolrealinklist
+    set gelmolrealinklist 0
+    unset gelmolrealinklist
+    set ngelmol 0
+    set imol 0
+    foreach gelmollinklook $gelmollinklist {
+      set gelflag [lindex $gelmollinklook 0]
+      #puts "$gelflag" 
+      #puts "$gelmollink_i"
+      if { $gelflag == 1} {
+	incr ngelmol
+	set gelmollinknew 0
+	unset gelmollinknew 
+	set gelmollink_i [lindex $gelmollinklook 1]
+	set jmol_index  0
+        foreach jmol $gelmollink_i {
+		if {[lindex [lindex $gelmollinklist $jmol] 0] == 0 || $jmol == $imol } {
+		#if {[lindex [lindex $gelmollinklist $jmol] 0] == 0 || $jmol <= $imol }
+			#delete the jmol
+			#puts "$gelmollink_i"
+			#puts "$jmol_index"
+			#puts "$imol"
+			#puts "$jmol"
+			set gelmollink_i [lreplace $gelmollink_i $jmol_index $jmol_index]
+			#puts "$gelmollink_i"
+		} else {
+			incr jmol_index
+		}
+	}
+	if { [llength $gelmollink_i] == 0 || [llength $gelmollink_i] == 1 } {
+		set gelmollink_i "$gelmollink_i "
+	}
+      } else {
+	set gelmollink_i {} 
+      }
+
+      lappend gelmolrealinklist $gelmollink_i
+      incr imol
+    }
+    puts "gelmolrealinklist: $gelmolrealinklist"
+    puts "[llength $gelmolrealinklist]"
+    puts "ngelmol= $ngelmol"
+   
+    #### generate $gelclusterlist 
+    set gelclusterlist 0
+    set find_gelcluster 0
+    set nmol [llength $gelmolrealinklist]
+    #puts "nmol : $nmol" 
+    set flag_already_in_gelclusterlist 0
+    unset flag_already_in_gelclusterlist
+    for { set imol 0 } { $imol < $nmol } {incr imol } {
+	lappend flag_already_in_gelclusterlist 0
+    }
+    for { set imol 0 } { $imol < $nmol } {incr imol } {
+      # is the imol a gel mol?
+      set imol_link_list [lindex $gelmolrealinklist $imol]
+      #puts "imol_link_list: $imol_link_list"
+      if { [llength $imol_link_list] > 0 } {
+        set find_gelcluster 1
+        if { $gelclusterlist != 0 } {
+		set findthismol_in_gelclusterlist [::cgtools::utils::find_mol_in_allclusters $gelclusterlist $imol]
+	}
+	if { $gelclusterlist == 0 || $findthismol_in_gelclusterlist == -1 } {
+		## generate a new cluster	
+		set currentcluster 0
+		unset currentcluster
+		lappend currentcluster $imol
+		set flag_already_in_gelclusterlist [lreplace $flag_already_in_gelclusterlist $imol $imol 1]
+		set currentchecklist {}
+		unset currentchecklist
+		if {[llength $imol_link_list] > 0} {
+		   if { $gelclusterlist == 0 } {
+			unset gelclusterlist
+		   }
+      		   foreach imol_link $imol_link_list {
+			lappend currentchecklist $imol_link
+		   }
+		}
+		#puts "currentchecklist: $currentchecklist"
+		## complete this new cluster
+		set n_check_mol [llength $currentchecklist] 
+		while { $n_check_mol > 0 } {
+		  #puts "n_check_mol: $n_check_mol"
+		  set newchecklist {} 
+		  set findnewcheckone 0
+		  #puts "currentchecklist: $currentchecklist"
+		  foreach jmol $currentchecklist {
+		    #puts "jmol:$jmol"
+		    set flag_already_in_gelcluster_now [lindex $flag_already_in_gelclusterlist $jmol]	
+	            #puts "flag_already_in_gelcluster_now: $flag_already_in_gelcluster_now"
+		    #puts "flag_already_in_gelclusterlist: $flag_already_in_gelclusterlist"
+		    if { $flag_already_in_gelcluster_now == 0 } {
+		     set findthismol_in_currentcluster [::cgtools::utils::find_mol_in_currentcluster $currentcluster $jmol]
+		     #puts "findthismol_in_currentcluster: $findthismol_in_currentcluster"
+		     #puts "currentcluster: $currentcluster"
+		     if { $findthismol_in_currentcluster == -1 } {
+			lappend currentcluster $jmol
+			set flag_already_in_gelclusterlist [lreplace $flag_already_in_gelclusterlist $jmol $jmol 1]
+		     }
+		     #puts "flag_already_in_gelclusterlist: $flag_already_in_gelclusterlist"
+		     set jmol_link_list [lindex $gelmolrealinklist $jmol]
+		     #puts "jmol_link_list: $jmol_link_list"
+		     #puts "[llength $jmol_link_list]"
+		     if { [llength $jmol_link_list] > 0} {
+      		     	   foreach jmol_link $jmol_link_list {
+				#puts "jmol_link : $jmol_link" 
+		       		set findthismol_in_newchecklist [::cgtools::utils::find_mol_in_currentcluster $newchecklist $jmol_link]
+				#puts "findthismol_in_newchecklist: $findthismol_in_newchecklist" 
+			       	if { $findthismol_in_newchecklist == -1 } {
+			       		if { $findnewcheckone == 0 } {
+						unset newchecklist
+		  				set findnewcheckone 1
+					}
+					lappend newchecklist $jmol_link
+				}
+			   }
+		     }
+		    }
+		  }
+		  if { $findnewcheckone == 0} {
+		 	set newchecklist {}
+		  }
+		  #puts "currentcluster: $currentcluster"
+		  set currentchecklist $newchecklist
+		  set n_check_mol [llength $currentchecklist] 
+		  #puts "currentchecklist: $currentchecklist"
+		  if { $n_check_mol > 0 } {
+			for { set i_check_mol 0 } { $i_check_mol < $n_check_mol} {incr i_check_mol } {
+				set imol_current_check [lindex $currentchecklist $i_check_mol]	
+				set flag_already_in_gelcluster_now [lindex $flag_already_in_gelclusterlist $imol_current_check]
+		                if { $flag_already_in_gelcluster_now == 1 } {
+				     set currentchecklist [lreplace $currentchecklist $i_check_mol $i_check_mol]
+				     set n_check_mol [ expr $n_check_mol - 1 ]
+				} else {
+				     #puts "imol_current_check= $imol_current_check"
+		     		     set imolneighbor_current_check [lindex $gelmolrealinklist $imol_current_check]
+				     if { [llength $imolneighbor_current_check] == 0} {
+				       set currentchecklist [lreplace $currentchecklist $i_check_mol $i_check_mol]
+                                       set n_check_mol [ expr $n_check_mol - 1 ]
+				     }
+				}
+
+			}
+		  }
+		  #  puts "currentchecklist: $currentchecklist"
+	        }
+		lappend gelclusterlist $currentcluster
+
+	}
+      }
+    }
+    if { $find_gelcluster == 0} {
+	set gelclusterlist {} 
+	#puts "llength gelclusterlist : [llength $gelclusterlist]"
+    }
+    puts "gelclusterlist= $gelclusterlist"
+    puts "ncluster= [llength $gelclusterlist]"
+    set igelmol 0
+    foreach iclusterlist $gelclusterlist {
+        foreach imollist $iclusterlist {
+	  incr igelmol
+	}
+    
+    }
+    puts "igelmol = $igelmol"
+    return $gelclusterlist
+}
+
+proc ::cgtools::utils::find_the_largest_cluster { gelclusterlist } {
+	set icluster_largest 0
+	set nmol_largest_cluster 0
+        set ncluster [llength $gelclusterlist]
+        for { set icluster 0 } { $icluster < $ncluster} {incr icluster} {
+                set gelcluster [lindex $gelclusterlist $icluster]
+                set nmol_this_cluster [llength $gelcluster]
+		if { $nmol_this_cluster > $nmol_largest_cluster } {
+			set nmol_largest_cluster $nmol_this_cluster
+			set icluster_largest $icluster
+                }
+        }
+        set largestcluster [lindex $gelclusterlist $icluster_largest]
+        return $largestcluster
+}
+
+### I don't use this function finally
+proc ::cgtools::utils::find_all_liquid_molecules { gelclusterlist ntotmol } {
+    set flag_liquid_mol_list 0
+    unset flag_liquid_mol_list
+    for { set imol 0 } { $imol < $ntotmol } {incr imol } {
+	lappend flag_liquid_mol_list 0
+    }
+    set ncluster [llength $gelclusterlist]
+    for { set icluster 0 } { $icluster < $ncluster} {incr icluster} {
+            set gelcluster [lindex $gelclusterlist $icluster]
+            set nmol_this_cluster [llength $gelcluster]
+            if { $nmol_this_cluster > $nmol_largest_cluster } {
+    	    	for { set imolindex 0 } { $imolindex < $nmol_this_cluster} {incr imolindex} {
+	       	 	set imol [lindex $gelcluster $imolindex]
+ 			set flag_liquid_mol_list [lreplace $flag_liquid_mol_list $imol $imol 1]
+            	}
+    	}
+    }
+    puts "[llength flag_liquid_mol_list]"
+    return $flag_liquid_mol_list
+}
+
+proc ::cgtools::utils::find_mol_in_allclusters { gelclusterlist imol } {
+	set flag_find_thismol_in_cluster -1
+	set ncluster [llength $gelclusterlist]
+	if { $ncluster > 0 } {
+	    	for { set icluster 0 } { $icluster < $ncluster} {incr icluster} {
+			set gelcluster [lindex $gelclusterlist $icluster]
+			set nmol_this_cluster [llength $gelcluster]
+    			for { set imol_this_cluster 0 } { $imol_this_cluster< $nmol_this_cluster} {incr imol_this_cluster} {
+				set this_mol_this_cluster [lindex $gelcluster $imol_this_cluster]
+				if { $imol == $this_mol_this_cluster } {
+					set flag_find_thismol_in_cluster $icluster 
+				}
+			}
+		}
+	}
+	return $flag_find_thismol_in_cluster
+}
+
+proc ::cgtools::utils::find_mol_in_currentcluster { currentcluster imol } {
+	set flag_find_thismol_in_cluster -1
+	set nmol_this_cluster [llength $currentcluster]
+    	for { set imol_this_cluster 0 } { $imol_this_cluster< $nmol_this_cluster} {incr imol_this_cluster} {
+		set this_mol_this_cluster [lindex $currentcluster $imol_this_cluster]
+		if { $imol == $this_mol_this_cluster } {
+			set flag_find_thismol_in_cluster $imol_this_cluster
+		}
+	}
+	return $flag_find_thismol_in_cluster
+}
+
+# ::cgtools::utils::writepdb_cluster_charmm --
+# This will write a PDB file that in the standard CHARMM format
+proc ::cgtools::utils::writepdb_cluster_charmm { file topology gelclusterlist gelclusterlargest args } {
+
+    set options {
+        {periodbox.arg  "0"    "whether use periodic boundary condition"}
+        {computecomz.arg  "0"    "whether compute center of mass of sytem"}
+    }
+    set usage "Usage: writecrd_charmm file topology \[periodbox] "
+    # Strip off optional arguments and store in params
+    array set params [::cmdline::getoptions args $options $usage]
+    
+    #set ntotmol [llength $topology]
+    #set flagliquidlist [find_all_liquid_molecules $gelclusterlist $ntotmol]
+
+    set useperiod $params(periodbox)
+    set adjustcomz $params(computecomz)
+
+    if {  $useperiod > 0 } {
+        #mmsg::send [namespace current] "using period boundary condition"
+        set inst_boxl [setmd box_l]
+    }
+    if {  $adjustcomz > 0 } {
+    	set comz_mem [compute_membrane_comz  $topology]
+    }
+
+    set f [open $file "w"]
+    puts $f "REMARK  AUTHOR: ZUNJING WANG"
+    puts $f "REMARK  PDB FILE:   CHARMM-FORMAT COORDINATE OF CG LIPID (IMPLICIT SOLVENT MODEL)"
+    puts $f "REMARK  T [setmd temp]"
+    puts $f "REMARK  boxl [setmd box_l]"
+
+    set imol 1
+    foreach mol $topology {
+	set thismol [expr $imol - 1]		
+	set findthismol_in_gelclusterlist [::cgtools::utils::find_mol_in_allclusters $gelclusterlist $thismol]
+	set findthismol_in_gellargestcluster [::cgtools::utils::find_mol_in_currentcluster $gelclusterlargest $thismol]
+  	set moltype [lindex $mol 0]
+    	set typeinfo [matchtype $moltype]
+  	set molname [lindex $typeinfo 1]
+    	set partbondlists [lindex $typeinfo 2]
+    	set partbondtypelists [lindex $typeinfo 3]
+    	set partbondcharmmlists [lindex $typeinfo 4]
+    
+    	#set and write particle list
+    	set beadlists [lindex $partbondlists 0]
+    	set nbeads [llength $beadlists]
+    
+    	#set beadtypelists [lindex $partbondtypelists 0]
+        #set itype_begin [lindex [lindex $beadtypelists 0] 0]
+    	set beadcharmmlists [lindex $partbondcharmmlists 0]
+
+    	if {  $useperiod > 0 } {
+		#mmsg::send [namespace current] "using period boundary condition"
+		set av_posmol { 0.0 0.0 0.0 }
+		for { set b 0 } { $b < $nbeads } {incr b } {
+	                #current particle
+        	        set partnum [lindex $mol [ expr $b + 1] ]
+	                set posvec [part $partnum print pos]
+			lset av_posmol 0 [expr [lindex $av_posmol 0] + [lindex $posvec 0] ]
+			lset av_posmol 1 [expr [lindex $av_posmol 1] + [lindex $posvec 1] ]
+			lset av_posmol 2 [expr [lindex $av_posmol 2] + [lindex $posvec 2] ]
+	        }
+		set av_posmol_x [expr [lindex $av_posmol 0]/($nbeads*1.0)]
+        	set av_posmol_y [expr [lindex $av_posmol 1]/($nbeads*1.0)]
+        	set av_posmol_z [expr [lindex $av_posmol 2]/($nbeads*1.0)]
+		set posmol_mov { 0.0 0.0 0.0 }
+		#x direction
+		while { [expr $av_posmol_x + [lindex $posmol_mov 0] ] < 0. } { 
+			lset posmol_mov 0 [expr [lindex $posmol_mov 0] + [lindex $inst_boxl 0] ]
+		}
+		while { [expr $av_posmol_x + [lindex $posmol_mov 0] ] > [lindex $inst_boxl 0] } { 
+			lset posmol_mov 0 [expr [lindex $posmol_mov 0] - [lindex $inst_boxl 0] ]
+		}
+		#y direction
+		while { [expr $av_posmol_y + [lindex $posmol_mov 1] ] < 0. } { 
+			lset posmol_mov 1 [expr [lindex $posmol_mov 1] + [lindex $inst_boxl 1] ]
+		}
+		while { [expr $av_posmol_y + [lindex $posmol_mov 1] ] > [lindex $inst_boxl 1] } { 
+			lset posmol_mov 1 [expr [lindex $posmol_mov 1] - [lindex $inst_boxl 1] ]
+		}
+		#z direction
+		while { [expr $av_posmol_z + [lindex $posmol_mov 2] ] < 0. } { 
+			lset posmol_mov 2 [expr [lindex $posmol_mov 2] + [lindex $inst_boxl 2] ]
+		}
+		while { [expr $av_posmol_z + [lindex $posmol_mov 2] ] > [lindex $inst_boxl 2] } { 
+			lset posmol_mov 2 [expr [lindex $posmol_mov 2] - [lindex $inst_boxl 2] ]
+		}
+   	}
+
+	for { set b 0 } { $b < $nbeads } {incr b } {
+        	#current particle
+        	set partnum [lindex $mol [ expr $b + 1] ]
+        	set partnumcharmm [expr $partnum + 1]
+
+        	set partname [lindex [lindex $beadcharmmlists $b] 1]
+
+		set posvec [part $partnum print pos]
+		set posx [lindex $posvec 0]
+		set posy [lindex $posvec 1]
+		set posz [lindex $posvec 2]
+    		if {  $adjustcomz > 0 } {
+			set posz [expr $posz - $comz_mem + 0.5*[lindex $inst_boxl 2]]
+	    	}
+    		if {  $useperiod > 0 } {	
+			set posx [expr $posx + [lindex $posmol_mov 0]]
+			set posy [expr $posy + [lindex $posmol_mov 1]]
+			set posz [expr $posz + [lindex $posmol_mov 2]]
+		}
+		set seqname "L$imol"	
+
+		if { $findthismol_in_gelclusterlist != -1 } {
+			if { $findthismol_in_gellargestcluster != -1 } {
+				set linepdb [format "ATOM  %5d %4s %4s %4d    %8.3f%8.3f%8.3f  2.00  0.00     %4s" $partnumcharmm $partname $molname $imol $posx $posy $posz $seqname]
+				puts $f $linepdb
+			} else {
+				set linepdb [format "ATOM  %5d %4s %4s %4d    %8.3f%8.3f%8.3f  1.00  0.00     %4s" $partnumcharmm $partname $molname $imol $posx $posy $posz $seqname]
+				puts $f $linepdb
+			}
+		} else {
+			set linepdb [format "ATOM  %5d %4s %4s %4d    %8.3f%8.3f%8.3f  0.00  0.00     %4s" $partnumcharmm $partname $molname $imol $posx $posy $posz $seqname]
+			puts $f $linepdb
+		}
+
+	}
+	incr imol		
+    }
+    puts $f "TER"
+    puts $f "END"
+    close $f
+}
+
+

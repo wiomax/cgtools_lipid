@@ -1,0 +1,56 @@
+# cgtools::utils -- 
+#
+# Compute parameters which will be used in cgtools::analysis
+# Zunjing Wang 
+# Author: Zun-Jing Wang
+# August 2010
+
+namespace eval ::cgtools::utils {
+    namespace export compute_membrane_comz
+}
+
+# ::cgtools::utils::compute_membrane_comz--
+proc ::cgtools::utils::compute_membrane_comz { topology } {
+
+    set memcomz 0.0
+    set ibead 0
+    foreach mol $topology {
+      set moltype [lindex $mol 0]
+      set typeinfo [matchtype $moltype]
+      set molname [lindex $typeinfo 1]
+      #if {$molname == "PART"} {
+      #  puts "this is a part"
+      #} 
+      if {$molname != "PART"} { 
+    	set partbondlists [lindex $typeinfo 2]
+    	set partbondtypelists [lindex $typeinfo 3]
+    	set partbondcharmmlists [lindex $typeinfo 4]
+    
+    	#set and write particle list
+    	set beadlists [lindex $partbondlists 0]
+    	set nbeads [llength $beadlists]
+    
+    	#set beadtypelists [lindex $partbondtypelists 0]
+        #set itype_begin [lindex [lindex $beadtypelists 0] 0]
+    	set beadcharmmlists [lindex $partbondcharmmlists 0]
+
+	for { set b 0 } { $b < $nbeads } {incr b } {
+        	#current particle
+        	set partnum [lindex $mol [ expr $b + 1] ]
+        	#set partnumcharmm [expr $partnum + 1]
+        	#set partname [lindex [lindex $beadcharmmlists $b] 1]
+		set posvec [part $partnum print pos]
+		#set posx [lindex $posvec 0]
+		#set posy [lindex $posvec 1]
+		set posz [lindex $posvec 2]
+		set memcomz [expr $memcomz + $posz]
+		incr ibead		
+	}
+      } 
+    }
+    set memcomz [expr $memcomz/($ibead*1.0)]
+    #puts "memcomz= $memcomz"
+    #exit
+    return $memcomz
+}
+
