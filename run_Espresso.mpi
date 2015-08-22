@@ -1,0 +1,5 @@
+#!/bin/bash
+mpirun -np 4 Espresso_bin ./cgtoolsmain.tcl -n 4 ./configs/examples/popcbilayer.tcl 
+#mpirun -np 4 Espresso_bin ./cgtoolsmain.tcl -n 4 ./configs/examples/random.tcl 
+#mpirun -np 4 Espresso_bin ./cgtoolsmain.tcl -n 4 ./configs/examples/dopcbilayer.tcl 
+#mpirun -np 4 Espresso_bin ./cgtoolsmain.tcl -n 4 ./configs/examples/dppcbilayer.tcl 
