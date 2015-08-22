@@ -1,17 +1,22 @@
-			===========================
-			==                       ==
-			==        cgtools        ==
-			==     Zun-Jing Wang     ==
-			==         (2010)        ==
-			==                       ==
-			===========================
+cgtools
+=======
+This software simulates lipid bilayer with a systematically solvent-free coarse-grained model. 
+
+General information
+-------------------
+
+Portal: http://www.wiomax.com/maos-tsp
+E-MAIL: info@wiomax.com
+
+License description
+-------------------
+
+See the [Creative Commons Non-Commercial License 3.0] (https://creativecommons.org/licenses/by-nc/3.0/us/) for more details.
+
+Please acknowledge the author(s) if you use this code in any way.
 
 REFERENCES:
-===========
-
-This software simulates lipid bilayer with a systematically solvent-free 
-coarse-grained model. These two references should be cited if the force-field or 
-the software package is used:
+-----------
 
 [1] Zun-Jing Wang, Markus Deserno. Systematic implicit solvent coarse-graining 
 of bilayer membranes: lipid and phase transferability of the force field. 
@@ -22,7 +27,7 @@ model for quantitative phospholipid bilayer simulations.
 Journal of Physical Chemistry B, 2010, 114(34): 11207-11220. 
 
 PROGRAM :
-=========
+---------
 
 cgtools is now for building and simulating a membrane only. Its updated version 
 (coming soon) will be a builder for a system with both membrane and peptide.
@@ -48,7 +53,7 @@ time.
 
 
 GETTING STARTED :
-=================
+-----------------
 System requirements :
 Script language :   tcl 8.4 or higher
 OS              :   Linux, Unix, Mac OS X (tested)
@@ -63,7 +68,7 @@ export PATH=$HOME/Espresso/obj-Core-pc-linux/:$PATH
 export ESPRESSO_SCRIPTS=~/Espresso/scripts"
 
 INSTALLATION :
-==============
+--------------
 Written in Tcl, thus nothing need to be compiled.
 Untar the archive in any directory. Set the CGTOOLS_DIR environment variable
 to your shell, setting it to its installation path. For example, under bash:
@@ -97,8 +102,7 @@ Don't forget to add this folder to your $PATH as well, and source your bash.
 
 
 QUICK START :
-=============
-
+-------------
 cgtools will *not* run unless a configuration file is specified in argument.
 The main script should be parsed inside Espresso : 
 
@@ -139,22 +143,22 @@ The 'configs/' folder contains several configuration files that are ready to
 be ran.
 
 PARAMETER FILE :
-================
+----------------
 We refer the user to the 'configs/examples' folder which contains examples. 
 
 INITIAL CONFIGURATION FILEs :
-=============================
+-----------------------------
 We refer the user to the 'readfiles/' folder which contains working examples. 
 
 FORCE FIELD :
-=============
+-------------
 Parameters for bonded interacting functions: set in 'overlapcoffs/' folder.
 Nonbonded tabulated force field: set in 'forcetables/' folder.
 For detailed information, read the online supporting information of reference [1].
 
 
 STRUCTURE OF THE CODE :
-=======================
+-----------------------
 
 The main script 'cgtoolsmain.tcl' is at the root of the archive. It mainly
 reads the configuration file, and starts relevant routines for the output.
@@ -179,7 +183,7 @@ The 'srcmembrane/' folder contains all the source code for membrane simulations.
  * 'analysis/' - contains analysis routines for bilayer membrane.
 
 TESTS & EXAMPLES:
-=================
+-----------------
 
  * Compute RDFs, density profile of a POPC bilayer membrane, in the folder of "cgtools", 
    run a command line:  
