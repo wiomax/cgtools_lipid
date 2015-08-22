@@ -1,4 +1,4 @@
-cgtools
+CGTools
 =======
 This software simulates lipid bilayer with a systematically solvent-free coarse-grained model. 
 
@@ -38,10 +38,10 @@ Initial positions of lipid molecules can be set with two ways:
 
 There are two main outputs to the program :
       - ESPResSo - one can feed the membrane in the molecular dynamics (MD)
-                software package. cgtools takes care of defining bonds, interactions,
-		positions,  etc. All the relevant ESPResSo parameters may be set in the
-		cgtools parameter file which will be read into the MD package. Then,
-		ESPResSo runs a simulation on the membrane(s).
+        software package. cgtools takes care of defining bonds, interactions,
+		    positions,  etc. All the relevant ESPResSo parameters may be set in the
+		    cgtools parameter file which will be read into the MD package. Then,
+		    ESPResSo runs a simulation on the membrane(s).
 
       - VMD - Visual Molecular Dynamics is a GUI that lets one visualize
         molecules in cgtools is able to write .pdb & .psf files that are
@@ -57,7 +57,7 @@ GETTING STARTED :
 System requirements :
 Script language :   tcl 8.4 or higher
 OS              :   Linux, Unix, Mac OS X (tested)
-Additional soft :   ESPResSo <www.espresso.mpg.de/>
+Additional soft :   ESPResSo <www.http://espressomd.org/>
 		    VMD <www.ks.uiuc.edu/Research/vmd/>
 
 Set path for executable ESPResSo file and scripts:
