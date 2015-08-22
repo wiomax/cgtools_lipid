@@ -1,6 +1,6 @@
 CGTools
 =======
-This software simulates lipid bilayer with a systematically solvent-free coarse-grained model. 
+An ESPResSo-compatible software for implementing simulations of lipid membranes with the systematically coarse-grained solvent-free model for quantitative phospholipid bilayer. 
 
 License description
 -------------------
