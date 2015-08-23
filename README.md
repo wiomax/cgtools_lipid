@@ -19,8 +19,6 @@ The main script should be parsed inside Espresso :
 	      [-replica [-connect HOST]]
 	      [-annealing]
 	      [-annealfast]
-	      [-hybrid]
-	      [-ffs]
 
    where the brackets represent optional choices. 
 
@@ -35,10 +33,6 @@ The main script should be parsed inside Espresso :
 
    '-annealfast' starts a fast annealing process, afterwards equilibrium the system 
    at the end temperature.
-
-   '-hybrid' starts a hybrid simulation of Monte Carlo and Molecular dynamics.
-   
-   '-ffs' starts a forward-flux-sampling Molecular dynamics simulation.
 
    Note that the optional arguments can be alternated, and they do not require
    brackets. 
