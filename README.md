@@ -44,11 +44,11 @@ The 'configs/' folder contains several configuration files that are ready to be 
 
 References
 ----------
-[1] Zun-Jing Wang, Markus Deserno. Systematic implicit solvent coarse-graining 
+[1] Z.-J. Wang, M. Deserno. Systematic implicit solvent coarse-graining 
 of bilayer membranes: lipid and phase transferability of the force field. 
 New Journal of Physics, 2010, 12(9): 095004. 
 
-[2] Zun-Jing Wang, Markus Deserno. A systematically coarse-grained solvent-free 
+[2] Z.-J. Wang, M. Deserno. A systematically coarse-grained solvent-free 
 model for quantitative phospholipid bilayer simulations. 
 Journal of Physical Chemistry B, 2010, 114(34): 11207-11220. 
 
