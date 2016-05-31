@@ -11,7 +11,7 @@ Please acknowledge the author(s) if you use this code in any way.
 
 Quick start
 -----------
-cgtools will *not* run unless a configuration file is specified in argument.
+CGTools will *not* run unless a configuration file is specified in argument.
 The main script should be parsed inside Espresso : 
 
    > Espresso cgtoolsmain.tcl <CONFIG_FILE> 
@@ -56,6 +56,3 @@ General information
 -------------------
 Portal: http://www.wiomax.com/cgtools
 E-MAIL: info@wiomax.com
-
-
-
