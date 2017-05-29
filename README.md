@@ -42,17 +42,20 @@ files inside.
 
 The 'configs/' folder contains several configuration files that are ready to be ran.
 
-References
-----------
-[1] Z.-J. Wang, M. Deserno. Systematic implicit solvent coarse-graining 
-of bilayer membranes: lipid and phase transferability of the force field. 
-New Journal of Physics, 2010, 12(9): 095004. 
+PLEASE CITE US!
+-----------------------------------------------------------------------------------
+If you use CGTools and obtain scientific results that you publish, we would ask you 
+to acknowledge the usage of CGTools by referencing
 
-[2] Z.-J. Wang, M. Deserno. A systematically coarse-grained solvent-free 
+[1] Z.-J. Wang, M. Deserno. A systematically coarse-grained solvent-free 
 model for quantitative phospholipid bilayer simulations. 
-Journal of Physical Chemistry B, 2010, 114(34): 11207-11220. 
+Journal of Physical Chemistry B, 2010, 114(34): 11207-11220.
+
+[2] Z.-J. Wang, M. Deserno. Systematic implicit solvent coarse-graining of 
+bilayer membranes: lipid and phase transferability of the force field. 
+New Journal of Physics, 2010, 12(9): 095004.
 
 General information
--------------------
+-----------------------------------------------------------------------------------
 Portal: http://www.wiomax.com/cgtools
 E-MAIL: info@wiomax.com
